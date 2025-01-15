@@ -9,7 +9,13 @@ import SwiftUI
 
 struct TimerView: View {
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        HStack(spacing: 20) {
+            Text("Timer").foregroundColor(.black)
+            Text("0:00").foregroundColor(.black)
+        }
+        .padding()
+        .background(Color(red: 0.7647058823529411, green: 0.9333333333333333, blue: 0.6313725490196078))
+        .cornerRadius(25)
     }
 }
 
