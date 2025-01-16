@@ -8,10 +8,13 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State var answer: String = ""
+    @State var answer : String = ""
+    @State private var min : Double = 15.0
+//    let answer: String
+    
     var body: some View {
         HeaderView().padding(.horizontal)
-        TimerView()
+        TimerView(min: self.$min)
         HStack(spacing: 20) {
             Text("What time is it?")
         }

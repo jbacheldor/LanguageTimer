@@ -8,10 +8,51 @@
 import SwiftUI
 
 struct TimerView: View {
+    @Binding var min : Double
+    @State private var isTimerRunning: Bool = false
+    @State private var seconds: Int = 0
+    @State private var minutes: Int = 15
+    
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    
+    var tap: some Gesture {
+           TapGesture()
+               .onEnded{
+                   isTimerRunning.toggle()
+               }
+       }
+    
+    static var duratioinFormatter: DateComponentsFormatter = {
+            let formatter = DateComponentsFormatter()
+            formatter.allowedUnits = [.hour, .minute, .second]
+            formatter.unitsStyle = .abbreviated
+            formatter.zeroFormattingBehavior = .dropLeading
+            return formatter
+        }()
+    
+    func calculateTime() {
+        if(self.seconds == 0){
+            self.minutes -= 1
+            self.seconds = 59
+        }
+        else {
+            self.seconds -= 1
+        }
+        }
+
     var body: some View {
         HStack(spacing: 20) {
-            Text("Timer").foregroundColor(.black)
-            Text("0:00").foregroundColor(.black)
+            Text("Timer \(minutes):\(seconds == 0 ? "00" : String(seconds))").foregroundColor(.black)
+                .onReceive(timer){ firedDate in
+                    if min > 0 && isTimerRunning {
+                        calculateTime()
+                    }
+                }
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804))
+                .frame(width: 70, height: 40, alignment: .center)
+                .gesture(tap)
+                .overlay(Text("\(isTimerRunning ? "Stop" : "Start")"))
         }
         .padding()
         .background(Color(red: 0.7647058823529411, green: 0.9333333333333333, blue: 0.6313725490196078))
@@ -19,6 +60,6 @@ struct TimerView: View {
     }
 }
 
-#Preview {
-    TimerView()
-}
+//#Preview {
+//    TimerView()
+//}
