@@ -9,7 +9,8 @@ import SwiftUI
 
 struct QuizView: View {
     @State var answer : String = ""
-    @State private var min : Double = 15.0
+//    @State private var min : Int
+    @Binding var minutes: Int
     
     var body: some View {
         NavigationView {
@@ -38,7 +39,7 @@ struct QuizView: View {
                 .shadow(color: Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804), radius: 5, x: 5, y: 5)
                 .padding(.horizontal).padding([.bottom], 10)
                 //            HeaderView2().padding(.horizontal).padding([.bottom], 10)
-                TimerView(min: self.$min)
+                TimerView(minutes: self.$minutes)
                     .padding([.bottom], 10)
                 VStack {
                     Text("What time is it?").padding([.top], 15)
@@ -76,6 +77,6 @@ struct QuizView: View {
 
         
 }
-#Preview {
-    QuizView()
-}
+//#Preview {
+//    QuizView(minutes: Int = 5)
+//}

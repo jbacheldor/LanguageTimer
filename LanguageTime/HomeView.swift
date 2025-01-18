@@ -9,9 +9,10 @@ import SwiftUI
 
 struct HomeView: View {
     @State private var selection: String = ""
-    @State private var timeSelection: Int = 5
+    @State var timeSelection: Int = 5
     let languages = ["Japanese", "Korean", "Urdu"]
     let times = [5, 10, 15]
+    var startAvailable: Bool = false
     
     var body: some View {
         NavigationView {
@@ -43,7 +44,7 @@ struct HomeView: View {
                     .cornerRadius(10)
             }
                 NavigationLink{
-                    QuizView() .navigationBarBackButtonHidden(true)
+                    QuizView(minutes: self.$timeSelection) .navigationBarBackButtonHidden(true)
                 } label: {
                     Text("Start")
                         .padding()
@@ -51,6 +52,7 @@ struct HomeView: View {
                 .background(Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804))
                 .cornerRadius(15)
                 .padding()
+                .disabled(selection != "" ?  false : true)
             }
         .foregroundColor(.black)
         .frame(width: 325, height: 300)
