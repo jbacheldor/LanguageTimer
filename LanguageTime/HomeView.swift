@@ -17,6 +17,8 @@ struct HomeView: View {
         NavigationView {
         VStack{
             Text("Timer Quiz").padding()
+                .background(Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804))
+                .cornerRadius(15)
             HStack {
                 Text("Select a language: ")
                 Picker("Select a Language", selection: $selection) {
@@ -24,6 +26,9 @@ struct HomeView: View {
                         Text($0)
                     }
                 }.pickerStyle(.menu)
+                    .tint(.black)
+                    .background(Color(red: 0.9411764705882353, green: 0.9490196078431372, blue: 0.9058823529411765))
+                    .cornerRadius(10)
             }.padding()
             
             HStack {
@@ -33,16 +38,24 @@ struct HomeView: View {
                         Text("\(time)").tag(time)
                     }
                 }.pickerStyle(.menu)
-            }.padding()
+                    .tint(.black)
+                    .background(Color(red: 0.9411764705882353, green: 0.9490196078431372, blue: 0.9058823529411765))
+                    .cornerRadius(10)
+            }
                 NavigationLink{
-                    QuizView()
+                    QuizView() .navigationBarBackButtonHidden(true)
                 } label: {
                     Text("Start")
-                }.foregroundColor(.black)
-                .frame(width: 70.0, height: 40.0)
-                .background(Color(red: 0.7647058823529411, green: 0.9333333333333333, blue: 0.6313725490196078))
+                        .padding()
+                }
+                .background(Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804))
                 .cornerRadius(15)
+                .padding()
             }
+        .foregroundColor(.black)
+        .frame(width: 325, height: 300)
+        .background(Color(red: 0.7647058823529411, green: 0.9333333333333333, blue: 0.6313725490196078))
+        .cornerRadius(25)
         }
     }
 }
