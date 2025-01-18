@@ -9,8 +9,16 @@ import SwiftUI
 
 struct QuizView: View {
     @State var answer : String = ""
-//    @State private var min : Int
     @Binding var minutes: Int
+    @State private var answersDict: [String : String] = [:]
+    @State var time: String = "00:00 AM"
+    
+    func generateRandomTime() {
+        let minutes = NSNumber(value: Int.random(in: 1...59)).intValue
+        let hours = NSNumber(value: Int.random(in: 1...12)).intValue
+        let timeSuffix = Bool.random() ? "PM" : "AM"
+        time = String(format: "%02i:%02i \(timeSuffix)", hours, minutes)
+    }
     
     var body: some View {
         NavigationView {
@@ -43,6 +51,7 @@ struct QuizView: View {
                     .padding([.bottom], 10)
                 VStack {
                     Text("What time is it?").padding([.top], 15)
+                    Text("\(time)")
                     Image("ClockFace")
                         .resizable()
                         .frame(width: 300, height: 300)
@@ -60,7 +69,11 @@ struct QuizView: View {
                     .frame(width: 300.0, height: 75.0)
                     .background(Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804))
                     .cornerRadius(25)
-                    Button("Submit"){}
+                    Button("Submit"){
+                        answersDict["test"] = answer
+                        answer = ""
+                        generateRandomTime()
+                    }
                         .frame(width: 100.0, height: 50.0)
                         .foregroundColor(.black)
                         .background(Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804))
@@ -77,6 +90,7 @@ struct QuizView: View {
 
         
 }
-//#Preview {
-//    QuizView(minutes: Int = 5)
-//}
+#Preview {
+    @State @Previewable var minutes: Int = 1
+    return QuizView(minutes: $minutes)
+}
