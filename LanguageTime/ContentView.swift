@@ -12,7 +12,6 @@ struct ContentView: View {
     //    @State private var min : Double = 15.0
     
     var body: some View {
-        HeaderView()
         HomeView()
     }
 }

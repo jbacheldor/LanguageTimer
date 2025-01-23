@@ -8,10 +8,10 @@
 import SwiftUI
 
 struct TimerView: View {
-    @Binding var min : Double
+//    @Binding var min : Int
     @State private var isTimerRunning: Bool = false
     @State private var seconds: Int = 0
-    @State private var minutes: Int = 15
+    @Binding var minutes: Int
     
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
@@ -44,7 +44,7 @@ struct TimerView: View {
         HStack(spacing: 20) {
             Text("Timer \(minutes):\(seconds == 0 ? "00" : String(seconds))").foregroundColor(.black)
                 .onReceive(timer){ firedDate in
-                    if min > 0 && isTimerRunning {
+                    if (self.seconds > 0 || self.minutes > 0) && isTimerRunning {
                         calculateTime()
                     }
                 }
