@@ -9,13 +9,15 @@ import SwiftUI
 
 struct QuizView: View {
     @State var answer : String = ""
-    @Binding var minutes: Int
+    @Binding var timerMinutes: Int
     @State private var answersDict: [String : String] = [:]
     @State var time: String = "00:00 AM"
+    @State var minutes: Int = 0
+    @State var hours: Int = 0
     
     func generateRandomTime() {
-        let minutes = NSNumber(value: Int.random(in: 1...59)).intValue
-        let hours = NSNumber(value: Int.random(in: 1...12)).intValue
+        minutes = NSNumber(value: Int.random(in: 1...59)).intValue
+        hours = NSNumber(value: Int.random(in: 1...12)).intValue
         let timeSuffix = Bool.random() ? "PM" : "AM"
         time = String(format: "%02i:%02i \(timeSuffix)", hours, minutes)
     }
@@ -47,12 +49,13 @@ struct QuizView: View {
                 .shadow(color: Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804), radius: 5, x: 5, y: 5)
                 .padding(.horizontal).padding([.bottom], 10)
                 //            HeaderView2().padding(.horizontal).padding([.bottom], 10)
-                TimerView(minutes: self.$minutes)
+                TimerView(minutes: self.$timerMinutes)
                     .padding([.bottom], 10)
                 VStack {
                     Text("What time is it?").padding([.top], 15)
                     Text("\(time)")
-                    Clock()
+                    Clock(timeInput: self.$time, minuteHand: self.$minutes,  hourHand: self.$hours)
+                    
                 }
                 .background(Color(red: 0.7647058823529411, green: 0.9333333333333333, blue: 0.6313725490196078))
                 .cornerRadius(25)
@@ -89,9 +92,14 @@ struct QuizView: View {
 }
 
 struct Clock: View {
+    @Binding var timeInput: String
+    @Binding var minuteHand: Int
+    @Binding var hourHand: Int
+    
     var primaryColor = Color(red: 0.7607843137254902, green: 0.9215686274509803, blue: 0.9647058823529412)
     var secondColor = Color(red: 0.7607843137254902, green: 0.8196078431372549, blue: 0.9647058823529412)
     var accentColor = Color(red: 0.611764705882353, green: 0.6549019607843137, blue: 0.7803921568627451)
+    
     
     var body: some View {
         ZStack{
@@ -104,12 +112,64 @@ struct Clock: View {
                 .frame(width: 15, height: 15)
             ClockFace().stroke(accentColor)
                 .frame(width: 300, height: 300)
+            Hands(minutes: $minuteHand, hours: $hourHand).stroke(accentColor).frame(width: 200, height: 200).shadow(radius: 25)
+        }.frame(width: 300, height: 300)
+    }
+}
+ 
+struct Hands: Shape {
+    @Binding var minutes: Int
+    @Binding var hours: Int
+    
+    var minute: Double {
+        get {
+            Double(minutes)
         }
+    }
+    var hour: Double {
+        get {
+            Double(hours)
+        }
+    }
+    
+    func getAngles(hour: Double, min: Double) -> [Angle] {
+        let hAngle: Angle = Angle.degrees(hour * 30 + min / 2)
+        let mAngle: Angle = Angle.degrees(min * 6)
+        return [hAngle, mAngle]
+    }
+    
+    func path(in rect: CGRect)-> Path {
+        var path = Path()
+//       both of these coming in at 300
+        let width = rect.size.width
+        let height = rect.size.height
+        
+        let angles = getAngles(hour: hour, min: minute)
+        
+//        radius of entire frame minus 100 to center it
+        let radius: Double = 200/2
+        
+        
+        let hourX = width/2 + (radius*2/3) * sin(angles[0].radians)
+        let hourY = width/2 - (radius*2/3) * cos(angles[0].radians)
+        
+////      this is for 0 degrees - 12
+        path.move(to: CGPoint(x: width/2, y: height/2))
+        path.addLine(to: CGPoint(x: hourX, y: hourY))
+        
+        
+        let minX = width/2 + (radius) * sin(angles[1].radians)
+        let minY = width/2 - (radius) * cos(angles[1].radians)
+        
+////      this is for 0 degrees - 12
+        path.move(to: CGPoint(x: width/2, y: height/2))
+        path.addLine(to: CGPoint(x: minX, y: minY))
+
+        return path
     }
 }
 
 struct ClockFace: Shape {
-    
     func path(in rect: CGRect) -> Path {
         var path = Path()
         let width = rect.size.width
@@ -150,26 +210,7 @@ struct ClockFace: Shape {
         }
 }
 
-//struct ClockFace1 {
-//    @Binding var time: String
-//    private var clockTicks: [String] = []
-//
-//    func buildClock (in rect: CGRect) -> Path {
-//        var path = Path()
-//        let width = rect.size.width
-//        let height = rect.size.height
-//        path.addEllipse(in: CGRect(x: 0.16667*width, y: 0.15556*height, width: 0.66935*width, height: 0.69167*height))
-//        path.addEllipse(in: CGRect(x: 0.48118*width, y: 0.48056*height, width: 0.04032*width, height: 0.04167*height))
-//        return path
-//    }
-//    
-//    func changeHands() {
-//        
-//    }
-//    
-//}
-
 #Preview {
-    @State @Previewable var minutes: Int = 1
-    return QuizView(minutes: $minutes)
+    @State @Previewable var timerMinutes: Int = 1
+     QuizView(timerMinutes: $timerMinutes)
 }
