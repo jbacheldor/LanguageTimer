@@ -15,6 +15,9 @@ struct QuizView: View {
     @State var minutes: Int = 0
     @State var hours: Int = 0
     
+    var enabledButtonColor = Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804)
+    var disabledButtonColor = Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804, opacity: 0.305)
+    
     func generateRandomTime() {
         minutes = NSNumber(value: Int.random(in: 1...59)).intValue
         hours = NSNumber(value: Int.random(in: 1...12)).intValue
@@ -70,15 +73,27 @@ struct QuizView: View {
                     .frame(width: 300.0, height: 75.0)
                     .background(Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804))
                     .cornerRadius(25)
-                    Button("Submit"){
-                        answersDict["test"] = answer
-                        answer = ""
-                        generateRandomTime()
+                    HStack{
+                        Button("Submit"){
+                            answersDict[time] = answer
+                            answer = ""
+                            generateRandomTime()
+                        }
+                            .frame(width: 100.0, height: 50.0)
+                            .foregroundColor(.black)
+                            .background(answer != "" ? enabledButtonColor : disabledButtonColor)
+                            .cornerRadius(25)
+                            .disabled(answer.isEmpty)
+                        Button("Skip"){
+                            answersDict[time] = ""
+                            answer = ""
+                            generateRandomTime()
+                        }
+                            .frame(width: 100.0, height: 50.0)
+                            .foregroundColor(.black)
+                            .background(Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804))
+                            .cornerRadius(25)
                     }
-                        .frame(width: 100.0, height: 50.0)
-                        .foregroundColor(.black)
-                        .background(Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804))
-                        .cornerRadius(25)
                 }
                 .padding()
                 .background(Color(red: 0.7647058823529411, green: 0.9333333333333333, blue: 0.6313725490196078))
