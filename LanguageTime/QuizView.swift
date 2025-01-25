@@ -10,13 +10,53 @@ import SwiftUI
 struct QuizView: View {
     @State var answer : String = ""
     @Binding var timerMinutes: Int
+    @State var timerSeconds: Int = 0
     @State private var answersDict: [String : String] = [:]
     @State var time: String = "00:00 AM"
     @State var minutes: Int = 0
     @State var hours: Int = 0
+    @State var isTimerRunning: Bool = false
     
     var enabledButtonColor = Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804)
     var disabledButtonColor = Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804, opacity: 0.305)
+    
+//    returns true if minutes & seconds are above 0
+    func isSubmitAllowed() -> Bool {
+        var submit = true
+//        this isn't working right now with the submit condition - womp womp womp
+        if(timerMinutes > 0 && timerSeconds > 0){
+            submit = false
+        }
+        if(answer == ""){
+            submit = false
+        }
+        if(!isTimerRunning){
+            submit = false
+        }
+        return submit
+    }
+    
+    func isSkipAllowed() -> Bool {
+        var skip = true
+
+        if(!isTimerRunning){
+            skip = false
+        }
+        
+        if(timerMinutes > 0 && timerSeconds > 0){
+            skip = false
+        }
+        
+        return skip
+    }
+    
+    func generateResults() -> Bool {
+        if(timerMinutes == 0 && timerSeconds == 0){
+            return true
+        }
+        return false
+    }
+    
     
     func generateRandomTime() {
         minutes = NSNumber(value: Int.random(in: 1...59)).intValue
@@ -51,14 +91,12 @@ struct QuizView: View {
                 .cornerRadius(25)
                 .shadow(color: Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804), radius: 5, x: 5, y: 5)
                 .padding(.horizontal).padding([.bottom], 10)
-                //            HeaderView2().padding(.horizontal).padding([.bottom], 10)
-                TimerView(minutes: self.$timerMinutes)
+                TimerView(isTimerRunning: self.$isTimerRunning, minutes: self.$timerMinutes, seconds: self.$timerSeconds)
                     .padding([.bottom], 10)
                 VStack {
                     Text("What time is it?").padding([.top], 15)
                     Text("\(time)")
                     Clock(timeInput: self.$time, minuteHand: self.$minutes,  hourHand: self.$hours)
-                    
                 }
                 .background(Color(red: 0.7647058823529411, green: 0.9333333333333333, blue: 0.6313725490196078))
                 .cornerRadius(25)
@@ -74,25 +112,50 @@ struct QuizView: View {
                     .background(Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804))
                     .cornerRadius(25)
                     HStack{
-                        Button("Submit"){
-                            answersDict[time] = answer
-                            answer = ""
-                            generateRandomTime()
+                        VStack {
+                            Button("Submit"){
+                                if(isSubmitAllowed()) {
+                                    answersDict[time] = answer
+                                    answer = ""
+                                    generateRandomTime()
+                                }
+                            }
                         }
-                            .frame(width: 100.0, height: 50.0)
-                            .foregroundColor(.black)
-                            .background(answer != "" ? enabledButtonColor : disabledButtonColor)
-                            .cornerRadius(25)
-                            .disabled(answer.isEmpty)
-                        Button("Skip"){
-                            answersDict[time] = ""
-                            answer = ""
-                            generateRandomTime()
+                        .frame(width: 100.0, height: 50.0)
+                        .foregroundColor(.black)
+                        .background(isSubmitAllowed() ? enabledButtonColor : disabledButtonColor)
+                        .cornerRadius(25)
+                        .disabled(answer.isEmpty || isSubmitAllowed())
+                        .onTapGesture {
+                            if(isSubmitAllowed()) {
+                                answersDict[time] = answer
+                                answer = ""
+                                generateRandomTime()
+                            }
                         }
-                            .frame(width: 100.0, height: 50.0)
-                            .foregroundColor(.black)
-                            .background(Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804))
-                            .cornerRadius(25)
+                        VStack {
+//                            do not love that this is being called in two different places
+                            Button("Skip"){
+                                if(isSkipAllowed()) {
+                                    answersDict[time] = ""
+                                    answer = ""
+                                    generateRandomTime()
+                                }
+                            }
+                        }
+                        .frame(width: 100.0, height: 50.0)
+                        .background(isSkipAllowed() ? enabledButtonColor : disabledButtonColor)
+                        .cornerRadius(25)
+                        .foregroundColor(.black)
+                        .disabled(isSkipAllowed())
+                        .onTapGesture {
+                            if(isSkipAllowed()) {
+                                answersDict[time] = ""
+                                answer = ""
+                                generateRandomTime()
+                            }
+                        }
+                        
                     }
                 }
                 .padding()
@@ -171,7 +234,6 @@ struct Hands: Shape {
 ////      this is for 0 degrees - 12
         path.move(to: CGPoint(x: width/2, y: height/2))
         path.addLine(to: CGPoint(x: hourX, y: hourY))
-        
         
         let minX = width/2 + (radius) * sin(angles[1].radians)
         let minY = width/2 - (radius) * cos(angles[1].radians)

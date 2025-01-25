@@ -8,10 +8,9 @@
 import SwiftUI
 
 struct TimerView: View {
-//    @Binding var min : Int
-    @State private var isTimerRunning: Bool = false
-    @State private var seconds: Int = 0
+    @Binding var isTimerRunning: Bool
     @Binding var minutes: Int
+    @Binding var seconds: Int
     
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
@@ -38,6 +37,9 @@ struct TimerView: View {
         else {
             self.seconds -= 1
         }
+        if(self.minutes == 0 && self.seconds == 0) {
+            isTimerRunning = false
+        }
         }
 
     var body: some View {
@@ -46,7 +48,7 @@ struct TimerView: View {
                 .onReceive(timer){ firedDate in
                     if (self.seconds > 0 || self.minutes > 0) && isTimerRunning {
                         calculateTime()
-                    }
+                    } 
                 }
             RoundedRectangle(cornerRadius: 10)
                 .fill(Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804))
@@ -61,6 +63,9 @@ struct TimerView: View {
     }
 }
 
-//#Preview {
-//    TimerView()
-//}
+#Preview {
+    @State @Previewable var minutes: Int = 1
+    @State @Previewable var seconds: Int = 1
+    @State @Previewable var isTimerRunning: Bool = false
+    TimerView(isTimerRunning: $isTimerRunning, minutes: $minutes, seconds: $seconds)
+}
