@@ -7,16 +7,111 @@
 
 import SwiftUI
 
+enum NetworkError: Error {
+    case badUrl
+    case invalidRequest
+    case badResponse
+    case badStatus
+    case failedToDecodeResponse
+}
+
+class WebService {
+    func downloadData<T: Codable>(fromURL: String) async -> T? {
+        do {
+            guard let url = URL(string: fromURL) else { throw NetworkError.badUrl }
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let response = response as? HTTPURLResponse else { throw NetworkError.badResponse }
+            guard response.statusCode >= 200 && response.statusCode < 300 else { throw NetworkError.badStatus }
+            guard let decodedResponse = try? JSONDecoder().decode(T.self, from: data) else { throw NetworkError.failedToDecodeResponse }
+            
+            return decodedResponse
+        } catch NetworkError.badUrl {
+            print("There was an error creating the URL")
+        } catch NetworkError.badResponse {
+            print("Did not get a valid response")
+        } catch NetworkError.badStatus {
+            print("Did not get a 2xx status code from the response")
+        } catch NetworkError.failedToDecodeResponse {
+            print("Failed to decode response into the given type")
+        } catch {
+            print("An error occured downloading the data")
+        }
+        
+        return nil
+    }
+}
+
+struct TimeTitle: Codable {
+    let title: String
+}
+
+class PostViewModel: ObservableObject {
+    @Published var timeData: TimeTitle = TimeTitle(title: "")
+    
+    func fetchData(targetLanguage: String) async {
+        guard let timeTitle: TimeTitle = await WebService().downloadData(fromURL: "http://localhost:8000/titles?language=\(targetLanguage)") else {return}
+        timeData = timeTitle
+    }
+}
+
+
 struct QuizView: View {
+    // what's being passed in from Home View
+    @State var timerMinutes: Int
+    @State var targetLanguage: String
+    
     @State var answer : String = ""
-    @Binding var timerMinutes: Int
+    @State var timerSeconds: Int = 0
     @State private var answersDict: [String : String] = [:]
     @State var time: String = "00:00 AM"
     @State var minutes: Int = 0
     @State var hours: Int = 0
+    @State var isTimerRunning: Bool = false
+    
+    @StateObject var vm = PostViewModel()
+
     
     var enabledButtonColor = Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804)
     var disabledButtonColor = Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804, opacity: 0.305)
+    
+//    returns true if minutes & seconds are above 0
+    func isSubmitAllowed() -> Bool {
+        var submit = true
+//        this isn't working right now with the submit condition - womp womp womp
+        if(timerMinutes > 0 && timerSeconds > 0){
+            submit = false
+        }
+        if(answer == ""){
+            submit = false
+        }
+        if(!isTimerRunning){
+            submit = false
+        }
+        return submit
+    }
+    
+    
+    func isSkipAllowed() -> Bool {
+        var skip = true
+
+        if(!isTimerRunning){
+            skip = false
+        }
+        
+        if(timerMinutes > 0 && timerSeconds > 0){
+            skip = false
+        }
+        
+        return skip
+    }
+    
+    func generateResults() -> Bool {
+        if(timerMinutes == 0 && timerSeconds == 0){
+            return true
+        }
+        return false
+    }
+    
     
     func generateRandomTime() {
         minutes = NSNumber(value: Int.random(in: 1...59)).intValue
@@ -26,17 +121,21 @@ struct QuizView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationView{
             VStack {
                 HStack(spacing: 20) {
-                    NavigationLink{
-                        HomeView()                       .navigationBarBackButtonHidden(true)
-                    } label : {
-                        Text("Home")
-                    }.foregroundColor(.black)
-                        .padding(.top, 2.0)
-                        .padding(.leading, 10.0)
-                        .navigationBarBackButtonHidden(true)
+                    withAnimation(.easeInOut(duration: 25)){
+                        NavigationLink{
+                            HomeView()                       .navigationBarBackButtonHidden(true)
+                                .animation(.spring(), value: true)
+                                .transition(.move(edge: .bottom))
+                        } label : {
+                            Text("Home")
+                        }.foregroundColor(.black)
+                            .padding(.top, 2.0)
+                            .padding(.leading, 10.0)
+                            .navigationBarBackButtonHidden(true)
+                    }
                     Spacer()
                     NavigationLink{
                         HomeView()                    .navigationBarBackButtonHidden(true)
@@ -51,14 +150,13 @@ struct QuizView: View {
                 .cornerRadius(25)
                 .shadow(color: Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804), radius: 5, x: 5, y: 5)
                 .padding(.horizontal).padding([.bottom], 10)
-                //            HeaderView2().padding(.horizontal).padding([.bottom], 10)
-                TimerView(minutes: self.$timerMinutes)
+                TimerView(isTimerRunning: self.$isTimerRunning, minutes: self.$timerMinutes, seconds: self.$timerSeconds)
                     .padding([.bottom], 10)
                 VStack {
-                    Text("What time is it?").padding([.top], 15)
+                    Text("\(vm.timeData.title)").padding([.top], 15)
+                    Text("What time is it?")
                     Text("\(time)")
                     Clock(timeInput: self.$time, minuteHand: self.$minutes,  hourHand: self.$hours)
-                    
                 }
                 .background(Color(red: 0.7647058823529411, green: 0.9333333333333333, blue: 0.6313725490196078))
                 .cornerRadius(25)
@@ -74,25 +172,50 @@ struct QuizView: View {
                     .background(Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804))
                     .cornerRadius(25)
                     HStack{
-                        Button("Submit"){
-                            answersDict[time] = answer
-                            answer = ""
-                            generateRandomTime()
+                        VStack {
+                            Button("Submit"){
+                                if(isSubmitAllowed()) {
+                                    answersDict[time] = answer
+                                    answer = ""
+                                    generateRandomTime()
+                                }
+                            }
                         }
-                            .frame(width: 100.0, height: 50.0)
-                            .foregroundColor(.black)
-                            .background(answer != "" ? enabledButtonColor : disabledButtonColor)
-                            .cornerRadius(25)
-                            .disabled(answer.isEmpty)
-                        Button("Skip"){
-                            answersDict[time] = ""
-                            answer = ""
-                            generateRandomTime()
+                        .frame(width: 100.0, height: 50.0)
+                        .foregroundColor(.black)
+                        .background(isSubmitAllowed() ? enabledButtonColor : disabledButtonColor)
+                        .cornerRadius(25)
+                        .disabled(answer.isEmpty || isSubmitAllowed())
+                        .onTapGesture {
+                            if(isSubmitAllowed()) {
+                                answersDict[time] = answer
+                                answer = ""
+                                generateRandomTime()
+                            }
                         }
-                            .frame(width: 100.0, height: 50.0)
-                            .foregroundColor(.black)
-                            .background(Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804))
-                            .cornerRadius(25)
+                        VStack {
+//                            do not love that this is being called in two different places
+                            Button("Skip"){
+                                if(isSkipAllowed()) {
+                                    answersDict[time] = ""
+                                    answer = ""
+                                    generateRandomTime()
+                                }
+                            }
+                        }
+                        .frame(width: 100.0, height: 50.0)
+                        .background(isSkipAllowed() ? enabledButtonColor : disabledButtonColor)
+                        .cornerRadius(25)
+                        .foregroundColor(.black)
+                        .disabled(isSkipAllowed())
+                        .onTapGesture {
+                            if(isSkipAllowed()) {
+                                answersDict[time] = ""
+                                answer = ""
+                                generateRandomTime()
+                            }
+                        }
+                        
                     }
                 }
                 .padding()
@@ -101,9 +224,14 @@ struct QuizView: View {
                 .shadow(color: Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804), radius: 5, x: 5, y: 5)
                 GameNavigation()
             }
+        }.onAppear {
+            if vm.timeData.title.isEmpty {
+                Task {
+                    await vm.fetchData(targetLanguage: self.targetLanguage)
+                }
+            }
         }
-}
-        
+    }
 }
 
 struct Clock: View {
@@ -172,7 +300,6 @@ struct Hands: Shape {
         path.move(to: CGPoint(x: width/2, y: height/2))
         path.addLine(to: CGPoint(x: hourX, y: hourY))
         
-        
         let minX = width/2 + (radius) * sin(angles[1].radians)
         let minY = width/2 - (radius) * cos(angles[1].radians)
         
@@ -227,5 +354,6 @@ struct ClockFace: Shape {
 
 #Preview {
     @State @Previewable var timerMinutes: Int = 1
-     QuizView(timerMinutes: $timerMinutes)
+    @State @Previewable var selection: String = "japanese"
+    QuizView(timerMinutes: timerMinutes, targetLanguage: selection)
 }

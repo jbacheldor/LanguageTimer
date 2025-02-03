@@ -11,7 +11,7 @@ struct HomeView: View {
     @State private var selection: String = ""
     @State var timeSelection: Int = 5
     let languages = ["Japanese", "Korean", "Urdu"]
-    let times = [5, 10, 15]
+    let times = [1, 3, 5, 10]
     var startAvailable: Bool = false
     
     var body: some View {
@@ -44,7 +44,7 @@ struct HomeView: View {
                     .cornerRadius(10)
             }
                 NavigationLink{
-                    QuizView(timerMinutes: self.$timeSelection) .navigationBarBackButtonHidden(true)
+                    QuizView(timerMinutes: self.timeSelection, targetLanguage: self.selection) .navigationBarBackButtonHidden(true)
                 } label: {
                     Text("Start")
                         .padding()
