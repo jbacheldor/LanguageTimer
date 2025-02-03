@@ -7,6 +7,54 @@
 
 import SwiftUI
 
+enum NetworkError: Error {
+    case badUrl
+    case invalidRequest
+    case badResponse
+    case badStatus
+    case failedToDecodeResponse
+}
+
+class WebService {
+    func downloadData<T: Codable>(fromURL: String) async -> T? {
+        do {
+            guard let url = URL(string: fromURL) else { throw NetworkError.badUrl }
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let response = response as? HTTPURLResponse else { throw NetworkError.badResponse }
+            guard response.statusCode >= 200 && response.statusCode < 300 else { throw NetworkError.badStatus }
+            guard let decodedResponse = try? JSONDecoder().decode(T.self, from: data) else { throw NetworkError.failedToDecodeResponse }
+            
+            return decodedResponse
+        } catch NetworkError.badUrl {
+            print("There was an error creating the URL")
+        } catch NetworkError.badResponse {
+            print("Did not get a valid response")
+        } catch NetworkError.badStatus {
+            print("Did not get a 2xx status code from the response")
+        } catch NetworkError.failedToDecodeResponse {
+            print("Failed to decode response into the given type")
+        } catch {
+            print("An error occured downloading the data")
+        }
+        
+        return nil
+    }
+}
+
+struct TimeTitle: Codable {
+    let title: String
+}
+
+class PostViewModel: ObservableObject {
+    @Published var timeData: TimeTitle = TimeTitle(title: "")
+    
+    func fetchData() async {
+        guard let timeTitle: TimeTitle = await WebService().downloadData(fromURL: "http://localhost:8000/titles?language=japanese") else {return}
+        timeData = timeTitle
+    }
+}
+
+
 struct QuizView: View {
     @State var answer : String = ""
     @Binding var timerMinutes: Int
@@ -16,6 +64,10 @@ struct QuizView: View {
     @State var minutes: Int = 0
     @State var hours: Int = 0
     @State var isTimerRunning: Bool = false
+    @State var language: String = "japanese"
+    
+    @StateObject var vm = PostViewModel()
+    
     
     var enabledButtonColor = Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804)
     var disabledButtonColor = Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804, opacity: 0.305)
@@ -35,6 +87,7 @@ struct QuizView: View {
         }
         return submit
     }
+    
     
     func isSkipAllowed() -> Bool {
         var skip = true
@@ -66,17 +119,21 @@ struct QuizView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationView{
             VStack {
                 HStack(spacing: 20) {
-                    NavigationLink{
-                        HomeView()                       .navigationBarBackButtonHidden(true)
-                    } label : {
-                        Text("Home")
-                    }.foregroundColor(.black)
-                        .padding(.top, 2.0)
-                        .padding(.leading, 10.0)
-                        .navigationBarBackButtonHidden(true)
+                    withAnimation(.easeInOut(duration: 25)){
+                        NavigationLink{
+                            HomeView()                       .navigationBarBackButtonHidden(true)
+                                .animation(.spring(), value: true)
+                                .transition(.move(edge: .bottom))
+                        } label : {
+                            Text("Home")
+                        }.foregroundColor(.black)
+                            .padding(.top, 2.0)
+                            .padding(.leading, 10.0)
+                            .navigationBarBackButtonHidden(true)
+                    }
                     Spacer()
                     NavigationLink{
                         HomeView()                    .navigationBarBackButtonHidden(true)
@@ -94,7 +151,8 @@ struct QuizView: View {
                 TimerView(isTimerRunning: self.$isTimerRunning, minutes: self.$timerMinutes, seconds: self.$timerSeconds)
                     .padding([.bottom], 10)
                 VStack {
-                    Text("What time is it?").padding([.top], 15)
+                    Text("\(vm.timeData.title)").padding([.top], 15)
+                    Text("What time is it?")
                     Text("\(time)")
                     Clock(timeInput: self.$time, minuteHand: self.$minutes,  hourHand: self.$hours)
                 }
@@ -164,9 +222,14 @@ struct QuizView: View {
                 .shadow(color: Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804), radius: 5, x: 5, y: 5)
                 GameNavigation()
             }
+        }.onAppear {
+            if vm.timeData.title.isEmpty {
+                Task {
+                    await vm.fetchData()
+                }
+            }
         }
-}
-        
+    }
 }
 
 struct Clock: View {
