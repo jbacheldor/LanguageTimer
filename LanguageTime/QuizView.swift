@@ -48,26 +48,28 @@ struct TimeTitle: Codable {
 class PostViewModel: ObservableObject {
     @Published var timeData: TimeTitle = TimeTitle(title: "")
     
-    func fetchData() async {
-        guard let timeTitle: TimeTitle = await WebService().downloadData(fromURL: "http://localhost:8000/titles?language=japanese") else {return}
+    func fetchData(targetLanguage: String) async {
+        guard let timeTitle: TimeTitle = await WebService().downloadData(fromURL: "http://localhost:8000/titles?language=\(targetLanguage)") else {return}
         timeData = timeTitle
     }
 }
 
 
 struct QuizView: View {
+    // what's being passed in from Home View
+    @State var timerMinutes: Int
+    @State var targetLanguage: String
+    
     @State var answer : String = ""
-    @Binding var timerMinutes: Int
     @State var timerSeconds: Int = 0
     @State private var answersDict: [String : String] = [:]
     @State var time: String = "00:00 AM"
     @State var minutes: Int = 0
     @State var hours: Int = 0
     @State var isTimerRunning: Bool = false
-    @State var language: String = "japanese"
     
     @StateObject var vm = PostViewModel()
-    
+
     
     var enabledButtonColor = Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804)
     var disabledButtonColor = Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804, opacity: 0.305)
@@ -225,7 +227,7 @@ struct QuizView: View {
         }.onAppear {
             if vm.timeData.title.isEmpty {
                 Task {
-                    await vm.fetchData()
+                    await vm.fetchData(targetLanguage: self.targetLanguage)
                 }
             }
         }
@@ -352,5 +354,6 @@ struct ClockFace: Shape {
 
 #Preview {
     @State @Previewable var timerMinutes: Int = 1
-     QuizView(timerMinutes: $timerMinutes)
+    @State @Previewable var selection: String = "japanese"
+    QuizView(timerMinutes: timerMinutes, targetLanguage: selection)
 }

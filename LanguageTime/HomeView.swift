@@ -44,7 +44,7 @@ struct HomeView: View {
                     .cornerRadius(10)
             }
                 NavigationLink{
-                    QuizView(timerMinutes: self.$timeSelection) .navigationBarBackButtonHidden(true)
+                    QuizView(timerMinutes: self.timeSelection, targetLanguage: self.selection) .navigationBarBackButtonHidden(true)
                 } label: {
                     Text("Start")
                         .padding()
