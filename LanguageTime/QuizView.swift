@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import Foundation
+
 
 enum NetworkError: Error {
     case badUrl
@@ -45,12 +47,66 @@ struct TimeTitle: Codable {
     let title: String
 }
 
-class PostViewModel: ObservableObject {
+class TimeTitleViewModel: ObservableObject {
     @Published var timeData: TimeTitle = TimeTitle(title: "")
     
     func fetchData(targetLanguage: String) async {
-        guard let timeTitle: TimeTitle = await WebService().downloadData(fromURL: "http://localhost:8000/titles?language=\(targetLanguage)") else {return}
+        let env = ProcessInfo.processInfo.environment
+        let url = env["SERVER_URL"]!
+        
+        guard let timeTitle: TimeTitle = await WebService().downloadData(fromURL: "\(url)titles?language=\(targetLanguage)") else {return}
         timeData = timeTitle
+    }
+}
+
+struct Answers: Codable {
+    let answersDict: [String : String]
+    var language: String
+}
+
+struct ResultsInfo: Codable {
+    let score: Double
+}
+
+class AnswerResultsViewModel: ObservableObject {
+//    @State var answersData: Answers
+    @Published var resultsData: ResultsInfo = ResultsInfo(score: 0.0)
+    
+    func postData(targetLanguage: String, answers: [String : String]) async {
+        do {
+            let env = ProcessInfo.processInfo.environment
+            let base_url = env["SERVER_URL"]!
+            
+            let data = Answers(answersDict: answers, language: targetLanguage)
+            
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = .prettyPrinted
+            let jsonData = try encoder.encode(data)
+
+            let url = URL(string: "\(base_url)results")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+            request.httpBody = jsonData
+        
+            print("pretty request body", String(data: jsonData, encoding: .utf8)!)
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                guard let data = data, error == nil else {
+                    print(error?.localizedDescription ?? "No data")
+                    return
+                }
+                let responseJSON = try? JSONSerialization.jsonObject(with: data, options: [])
+                if let responseJSON = responseJSON as? [String: Any] {
+                    print("response", responseJSON)
+                }
+            }
+            task.resume()
+        }
+        catch {
+            print("error in sharing data tast")
+        }
     }
 }
 
@@ -68,9 +124,9 @@ struct QuizView: View {
     @State var hours: Int = 0
     @State var isTimerRunning: Bool = false
     
-    @StateObject var vm = PostViewModel()
+    @StateObject var vm = TimeTitleViewModel()
+    @StateObject var answervm = AnswerResultsViewModel()
 
-    
     var enabledButtonColor = Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804)
     var disabledButtonColor = Color(red: 0.5215686274509804, green: 0.6784313725490196, blue: 0.3215686274509804, opacity: 0.305)
     
@@ -213,6 +269,9 @@ struct QuizView: View {
                                 answersDict[time] = ""
                                 answer = ""
                                 generateRandomTime()
+                            }
+                            Task {
+                                await answervm.postData(targetLanguage: self.targetLanguage, answers: self.answersDict)
                             }
                         }
                         

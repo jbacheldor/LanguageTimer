@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    @State private var selection: String = ""
+    @State private var selection: String = "Japanese"
     @State var timeSelection: Int = 5
     let languages = ["Japanese", "Korean", "Urdu"]
     let times = [1, 3, 5, 10]
